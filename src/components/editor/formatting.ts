@@ -8,6 +8,22 @@ const HEADING_LEVELS: Array<1 | 2 | 3> = [1, 2, 3]
 const getActiveHeadingLevel = (editor: Editor): 1 | 2 | 3 | null =>
   HEADING_LEVELS.find((level) => editor.isActive('heading', { level })) ?? null
 
+export const getActiveLineHeight = (editor: Editor): string | null => {
+  const parentLineHeight = editor.state.selection.$from.parent?.attrs?.lineHeight
+  const normalizedParent =
+    typeof parentLineHeight === 'string' && parentLineHeight.length > 0 ? parentLineHeight : null
+
+  const headingLineHeight = editor.isActive('heading')
+    ? ((editor.getAttributes('heading') as Record<string, string | null>)?.lineHeight ?? null)
+    : null
+
+  const paragraphLineHeight = editor.isActive('paragraph')
+    ? ((editor.getAttributes('paragraph') as Record<string, string | null>)?.lineHeight ?? null)
+    : null
+
+  return normalizedParent ?? headingLineHeight ?? paragraphLineHeight ?? null
+}
+
 export const captureFormatting = (editor: Editor): FormattingSnapshot => {
   const textStyle = editor.getAttributes('textStyle') as Record<string, string>
   const headingLevel = getActiveHeadingLevel(editor)
@@ -29,6 +45,7 @@ export const captureFormatting = (editor: Editor): FormattingSnapshot => {
     fontFamily: (textStyle?.fontFamily as string | undefined) ?? null,
     backgroundColor: normalizeHexColor(textStyle?.backgroundColor) ?? null,
     align,
+    lineHeight: getActiveLineHeight(editor),
     link: linkAttributes?.href ?? null,
     blockType,
   }
@@ -48,6 +65,7 @@ export const applyFormatting = (editor: Editor, snapshot: FormattingSnapshot) =>
     .unsetBackgroundColor()
     .unsetLink()
     .unsetTextAlign()
+    .unsetLineHeight()
 
   if (snapshot.blockType?.type === 'heading') {
     if (currentHeadingLevel !== snapshot.blockType.level) {
@@ -85,6 +103,10 @@ export const applyFormatting = (editor: Editor, snapshot: FormattingSnapshot) =>
 
   if (snapshot.backgroundColor) {
     chain.setBackgroundColor(snapshot.backgroundColor)
+  }
+
+  if (snapshot.lineHeight) {
+    chain.setLineHeight(snapshot.lineHeight)
   }
 
   if (snapshot.align) {

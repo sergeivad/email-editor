@@ -40,12 +40,23 @@ const FONT_SIZE_OPTIONS = [
   { label: '28 px', value: '28px' },
 ]
 
+const LINE_HEIGHT_OPTIONS = [
+  { label: 'Интерлиньяж', value: '' },
+  { label: '1.0', value: '1' },
+  { label: '1.2', value: '1.2' },
+  { label: '1.5', value: '1.5' },
+  { label: '1.75', value: '1.75' },
+  { label: '2.0', value: '2' },
+  { label: '2.5', value: '2.5' },
+]
+
 interface SelectionState {
   color: string | null
   fontSize: string | null
   fontFamily: string | null
   align: Alignment | null
   backgroundColor: string | null
+  lineHeight: string | null
 }
 
 interface EditorToolbarProps {
@@ -205,6 +216,15 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
     execute().setFontSize(value).run()
   }
 
+  const handleLineHeightChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value
+    if (!value) {
+      execute().unsetLineHeight().run()
+      return
+    }
+    execute().setLineHeight(value).run()
+  }
+
   const handleFontFamilyChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value
     if (!value) {
@@ -345,6 +365,18 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
           aria-label="Размер шрифта"
         >
           {FONT_SIZE_OPTIONS.map((option) => (
+            <option key={option.value || 'default'} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="editor-toolbar__select"
+          value={selectionState.lineHeight ?? ''}
+          onChange={handleLineHeightChange}
+          aria-label="Межстрочный интервал"
+        >
+          {LINE_HEIGHT_OPTIONS.map((option) => (
             <option key={option.value || 'default'} value={option.value}>
               {option.label}
             </option>
@@ -493,6 +525,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
               .unsetFontSize()
               .unsetFontFamily()
               .unsetBackgroundColor()
+              .unsetLineHeight()
               .unsetTextAlign()
               .run()
           }}
