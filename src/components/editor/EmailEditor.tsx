@@ -30,10 +30,6 @@ type SelectionState = {
   backgroundColor: string | null
 }
 
-interface EmailEditorProps {
-  theme: 'light' | 'dark'
-}
-
 const AUTOSAVE_STORAGE_KEY = 'wysiwyg-email-autosave'
 const INITIAL_EMAIL_HTML = `
   <table role="presentation" width="100%" border="0" cellPadding="0" cellSpacing="0" style="max-width: 640px; margin: 0 auto; width: 100%;">
@@ -46,7 +42,7 @@ const INITIAL_EMAIL_HTML = `
   </table>
 `
 
-export const EmailEditor = ({ theme }: EmailEditorProps) => {
+export const EmailEditor = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('design')
   const [htmlContent, setHtmlContent] = useState<string>(() => sanitizeHtml(INITIAL_EMAIL_HTML))
   const [htmlDraft, setHtmlDraft] = useState<string>('')
@@ -289,7 +285,7 @@ export const EmailEditor = ({ theme }: EmailEditorProps) => {
   ]
 
   return (
-    <div className="email-editor" data-theme={theme}>
+    <div className="email-editor">
 
       {viewMode === 'design' && (
         <>
