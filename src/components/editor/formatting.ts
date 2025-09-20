@@ -3,9 +3,19 @@ import { normalizeHexColor } from '../../utils/colors'
 import type { FormattingSnapshot } from './types'
 
 export const ALIGNMENTS: Array<'left' | 'center' | 'right' | 'justify'> = ['left', 'center', 'right', 'justify']
+const HEADING_LEVELS: Array<1 | 2 | 3> = [1, 2, 3]
+
+const getActiveHeadingLevel = (editor: Editor): 1 | 2 | 3 | null =>
+  HEADING_LEVELS.find((level) => editor.isActive('heading', { level })) ?? null
 
 export const captureFormatting = (editor: Editor): FormattingSnapshot => {
   const textStyle = editor.getAttributes('textStyle') as Record<string, string>
+  const headingLevel = getActiveHeadingLevel(editor)
+  const blockType: FormattingSnapshot['blockType'] = headingLevel
+    ? { type: 'heading', level: headingLevel }
+    : editor.isActive('paragraph')
+      ? { type: 'paragraph' }
+      : null
 
   const align = ALIGNMENTS.find((alignment) => editor.isActive({ textAlign: alignment })) ?? null
   const linkAttributes = editor.getAttributes('link') as { href?: string }
@@ -20,11 +30,13 @@ export const captureFormatting = (editor: Editor): FormattingSnapshot => {
     backgroundColor: normalizeHexColor(textStyle?.backgroundColor) ?? null,
     align,
     link: linkAttributes?.href ?? null,
+    blockType,
   }
 }
 
 export const applyFormatting = (editor: Editor, snapshot: FormattingSnapshot) => {
   const chain = editor.chain().focus()
+  const currentHeadingLevel = getActiveHeadingLevel(editor)
 
   chain
     .unsetBold()
@@ -36,6 +48,16 @@ export const applyFormatting = (editor: Editor, snapshot: FormattingSnapshot) =>
     .unsetBackgroundColor()
     .unsetLink()
     .unsetTextAlign()
+
+  if (snapshot.blockType?.type === 'heading') {
+    if (currentHeadingLevel !== snapshot.blockType.level) {
+      chain.setHeading({ level: snapshot.blockType.level })
+    }
+  } else if (snapshot.blockType?.type === 'paragraph') {
+    if (!editor.isActive('paragraph')) {
+      chain.setParagraph()
+    }
+  }
 
   if (snapshot.bold) {
     chain.setBold()
