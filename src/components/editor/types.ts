@@ -9,6 +9,7 @@ export type FormattingSnapshot = {
   fontFamily?: string | null
   align?: 'left' | 'center' | 'right' | 'justify' | null
   backgroundColor?: string | null
+  lineHeight?: string | null
   link?: string | null
   blockType?:
     | { type: 'paragraph' }

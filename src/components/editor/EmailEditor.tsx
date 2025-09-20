@@ -16,9 +16,10 @@ import { PreviewPane } from './PreviewPane'
 import { FontSize } from './extensions/fontSize'
 import { FontFamily } from './extensions/fontFamily'
 import { BackgroundColor } from './extensions/backgroundColor'
+import { LineHeight } from './extensions/lineHeight'
 import { formatHtml } from '../../utils/formatHtml'
 import { normalizeHexColor } from '../../utils/colors'
-import { ALIGNMENTS, applyFormatting, captureFormatting } from './formatting'
+import { ALIGNMENTS, applyFormatting, captureFormatting, getActiveLineHeight } from './formatting'
 import type { FormattingSnapshot, ViewMode } from './types'
 import './EmailEditor.css'
 
@@ -28,6 +29,7 @@ type SelectionState = {
   fontFamily: string | null
   align: 'left' | 'center' | 'right' | 'justify' | null
   backgroundColor: string | null
+  lineHeight: string | null
 }
 
 const AUTOSAVE_STORAGE_KEY = 'wysiwyg-email-autosave'
@@ -52,6 +54,7 @@ export const EmailEditor = () => {
     fontFamily: '',
     align: 'left',
     backgroundColor: 'transparent',
+    lineHeight: '',
   })
   const [formatSnapshot, setFormatSnapshot] = useState<FormattingSnapshot | null>(null)
   const [autosaveTimestamp, setAutosaveTimestamp] = useState<number | null>(null)
@@ -90,6 +93,7 @@ export const EmailEditor = () => {
         FontSize,
         FontFamily,
         BackgroundColor,
+        LineHeight,
         TextAlign.configure({
           types: ['heading', 'paragraph', 'image'],
         }),
@@ -147,6 +151,7 @@ export const EmailEditor = () => {
       const fontFamily = textStyle?.fontFamily ?? ''
       const backgroundColor = normalizeHexColor(textStyle?.backgroundColor) ?? 'transparent'
       const align = ALIGNMENTS.find((alignment) => editor.isActive({ textAlign: alignment })) ?? null
+      const lineHeight = getActiveLineHeight(editor) ?? ''
 
       setSelectionState({
         color,
@@ -154,6 +159,7 @@ export const EmailEditor = () => {
         fontFamily,
         align,
         backgroundColor,
+        lineHeight,
       })
     }
 
