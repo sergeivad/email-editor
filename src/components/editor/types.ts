@@ -10,6 +10,10 @@ export type FormattingSnapshot = {
   align?: 'left' | 'center' | 'right' | 'justify' | null
   backgroundColor?: string | null
   link?: string | null
+  blockType?:
+    | { type: 'paragraph' }
+    | { type: 'heading'; level: 1 | 2 | 3 }
+    | null
 }
 
 export type ExportFormat = 'html' | 'text'
