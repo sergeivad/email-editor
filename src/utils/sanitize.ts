@@ -71,6 +71,41 @@ const ALLOWED_ATTR = [
 
 let hooksInitialized = false
 
+const removeEmptyParagraphs = (html: string): string => {
+  if (!html) {
+    return html
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  doc.body.querySelectorAll('p').forEach((paragraph) => {
+    if (paragraph.querySelector('img, table, iframe, svg, video, audio')) {
+      return
+    }
+
+    const textContent = paragraph.textContent?.replace(/\u00a0/g, '').trim() ?? ''
+    if (textContent.length > 0) {
+      return
+    }
+
+    const hasNonBreakChildren = Array.from(paragraph.children).some((child) => {
+      if (child.tagName.toLowerCase() === 'br') {
+        return false
+      }
+
+      const childText = child.textContent?.replace(/\u00a0/g, '').trim() ?? ''
+      return childText.length > 0
+    })
+
+    if (!hasNonBreakChildren) {
+      paragraph.remove()
+    }
+  })
+
+  return doc.body.innerHTML
+}
+
 const ensureHooks = () => {
   if (hooksInitialized || typeof window === 'undefined') {
     return
@@ -137,13 +172,15 @@ export const sanitizeHtml = (html: string): string => {
   }
 
   ensureHooks()
-  return DOMPurify.sanitize(html, {
+  const sanitized = DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     FORBID_TAGS: ['script', 'style', 'meta'],
     FORBID_ATTR: ['onerror', 'onclick'],
     KEEP_CONTENT: true,
   })
+
+  return removeEmptyParagraphs(sanitized)
 }
 
 export const sanitizePasteHtml = (html: string): string => sanitizeHtml(html)
