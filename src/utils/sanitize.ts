@@ -69,57 +69,31 @@ const ALLOWED_ATTR = [
   'aria-label',
 ]
 
-let hooksInitialized = false
+const INLINE_TAG_REGEX = /<\/?(?:span|strong|em|b|i|u|mark|small|sub|sup|font)[^>]*>/gi
+const MEDIA_TAG_REGEX = /<(?:img|table|iframe|svg|video|audio)\b/i
 
-const isStructuralChild = (node: Element) =>
-  node.matches('img, table, iframe, svg, video, audio')
-
-const isEmptyParagraph = (node: Element) => {
-  if (node.tagName.toLowerCase() !== 'p') {
-    return false
-  }
-
-  if (node.childElementCount === 0) {
-    const text = node.textContent?.replace(/\u00a0/g, '').trim() ?? ''
-    return text.length === 0
-  }
-
-  const structuralChild = Array.from(node.children).find((child) => isStructuralChild(child as Element))
-  if (structuralChild) {
-    return false
-  }
-
-  const textContent = node.textContent?.replace(/\u00a0/g, '').trim() ?? ''
-  if (textContent.length > 0) {
-    return false
-  }
-
-  const hasContentfulDescendant = Array.from(node.querySelectorAll('*')).some((child) => {
-    if (child.matches('br')) {
-      return false
+const collapseEmptyParagraphs = (html: string): string =>
+  html.replace(/<p\b[^>]*>([\s\S]*?)<\/p>/gi, (match, inner) => {
+    if (MEDIA_TAG_REGEX.test(inner)) {
+      return match
     }
 
-    if (isStructuralChild(child)) {
-      return true
-    }
+    const text = inner
+      .replace(/<br\s*\/?>(\s|&nbsp;)*/gi, '')
+      .replace(INLINE_TAG_REGEX, '')
+      .replace(/&nbsp;/gi, '')
+      .replace(/<!--([\s\S]*?)-->/g, '')
+      .replace(/[\s\u200b\r\n]+/g, '')
 
-    const text = child.textContent?.replace(/\u00a0/g, '').trim() ?? ''
-    return text.length > 0
+    return text.length === 0 ? '' : match
   })
 
-  return !hasContentfulDescendant
-}
+let hooksInitialized = false
 
 const ensureHooks = () => {
   if (hooksInitialized || typeof window === 'undefined') {
     return
   }
-
-  DOMPurify.addHook('afterSanitizeElements', (node) => {
-    if (node instanceof Element && isEmptyParagraph(node)) {
-      node.remove()
-    }
-  })
 
   DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
     if (data.attrName === 'style') {
@@ -182,13 +156,15 @@ export const sanitizeHtml = (html: string): string => {
   }
 
   ensureHooks()
-  return DOMPurify.sanitize(html, {
+  const sanitized = DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     FORBID_TAGS: ['script', 'style', 'meta'],
     FORBID_ATTR: ['onerror', 'onclick'],
     KEEP_CONTENT: true,
   })
+
+  return collapseEmptyParagraphs(sanitized)
 }
 
 export const sanitizePasteHtml = (html: string): string => sanitizeHtml(html)
