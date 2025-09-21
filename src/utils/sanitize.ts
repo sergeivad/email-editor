@@ -71,45 +71,55 @@ const ALLOWED_ATTR = [
 
 let hooksInitialized = false
 
-const removeEmptyParagraphs = (html: string): string => {
-  if (!html) {
-    return html
+const isStructuralChild = (node: Element) =>
+  node.matches('img, table, iframe, svg, video, audio')
+
+const isEmptyParagraph = (node: Element) => {
+  if (node.tagName.toLowerCase() !== 'p') {
+    return false
   }
 
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
+  if (node.childElementCount === 0) {
+    const text = node.textContent?.replace(/\u00a0/g, '').trim() ?? ''
+    return text.length === 0
+  }
 
-  doc.body.querySelectorAll('p').forEach((paragraph) => {
-    if (paragraph.querySelector('img, table, iframe, svg, video, audio')) {
-      return
+  const structuralChild = Array.from(node.children).find((child) => isStructuralChild(child as Element))
+  if (structuralChild) {
+    return false
+  }
+
+  const textContent = node.textContent?.replace(/\u00a0/g, '').trim() ?? ''
+  if (textContent.length > 0) {
+    return false
+  }
+
+  const hasContentfulDescendant = Array.from(node.querySelectorAll('*')).some((child) => {
+    if (child.matches('br')) {
+      return false
     }
 
-    const textContent = paragraph.textContent?.replace(/\u00a0/g, '').trim() ?? ''
-    if (textContent.length > 0) {
-      return
+    if (isStructuralChild(child)) {
+      return true
     }
 
-    const hasNonBreakChildren = Array.from(paragraph.children).some((child) => {
-      if (child.tagName.toLowerCase() === 'br') {
-        return false
-      }
-
-      const childText = child.textContent?.replace(/\u00a0/g, '').trim() ?? ''
-      return childText.length > 0
-    })
-
-    if (!hasNonBreakChildren) {
-      paragraph.remove()
-    }
+    const text = child.textContent?.replace(/\u00a0/g, '').trim() ?? ''
+    return text.length > 0
   })
 
-  return doc.body.innerHTML
+  return !hasContentfulDescendant
 }
 
 const ensureHooks = () => {
   if (hooksInitialized || typeof window === 'undefined') {
     return
   }
+
+  DOMPurify.addHook('afterSanitizeElements', (node) => {
+    if (node instanceof Element && isEmptyParagraph(node)) {
+      node.remove()
+    }
+  })
 
   DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
     if (data.attrName === 'style') {
@@ -172,15 +182,13 @@ export const sanitizeHtml = (html: string): string => {
   }
 
   ensureHooks()
-  const sanitized = DOMPurify.sanitize(html, {
+  return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     FORBID_TAGS: ['script', 'style', 'meta'],
     FORBID_ATTR: ['onerror', 'onclick'],
     KEEP_CONTENT: true,
   })
-
-  return removeEmptyParagraphs(sanitized)
 }
 
 export const sanitizePasteHtml = (html: string): string => sanitizeHtml(html)
